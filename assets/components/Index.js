@@ -4,20 +4,32 @@ import { Button, Rating, Spinner } from "flowbite-react";
 const Index = (props) => {
   const [movies, setMovies] = useState([]);
   const [genres, setGenres] = useState([]);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchMovies();
     fetchGenre();
   }, []);
-
-  const fetchMovies = (genre) => {
+  const fetchMovies = (genre, orderBy) => {
     setLoading(true);
     let url = "/api/movies";
 
+    const params = new URLSearchParams();
     if (genre) {
-      url += `?genre=${genre}`;
+      params.append("genre", genre);
     }
+    if (orderBy) {
+      if (orderBy == "recent" || orderBy == "older") {
+        params.append("date", orderBy);
+      } else {
+        params.append("rating", orderBy);
+      }
+    }
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
     return fetch(url)
       .then((response) => response.json())
       .then((data) => {
@@ -51,13 +63,25 @@ const Index = (props) => {
 
 const Filters = ({ genres, fetchMovies }) => {
   const [genre, setGenre] = useState("");
+  const [orderBy, setOrderBy] = useState("");
 
   const handleGenreChange = (event) => {
     const newGenre = event.target.value;
     setGenre(newGenre);
-    fetchMovies(newGenre);
+    fetchMovies(newGenre, orderBy);
   };
 
+  const handleOrderByChange = (event) => {
+    const newOrderBy = event.target.value;
+    setOrderBy(newOrderBy);
+    fetchMovies(genre, newOrderBy);
+  };
+
+  const handleClearFilters = () => {
+    setGenre("");
+    setOrderBy("");
+    fetchMovies();
+  };
   const genreOptions = [
     { id: "", value: "All Genres" },
     ...genres.map((genre) => ({ id: genre.id, value: genre.id })),
@@ -68,8 +92,30 @@ const Filters = ({ genres, fetchMovies }) => {
       <div className="w-1/2 mr-4">
         <div className="flex items-center">
           <label
-            htmlFor="genre-select"
+            htmlFor="order-by-select"
             className="font-bold text-gray-700 mr-4 w-2/4 text-right"
+          >
+            Order by:
+          </label>
+          <select
+            id="order-by-select"
+            className="block appearance-none w-full bg-white border border-gray-400 hover:border-gray-500 px-4 py-2 pr-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline"
+            value={orderBy}
+            onChange={handleOrderByChange}
+          >
+            <option value=""></option>
+            <option value="recent">Newest</option>
+            <option value="older">Older</option>
+            <option value="ascending">Best rating</option>
+            <option value="descending">Worst rating</option>
+          </select>
+        </div>
+      </div>
+      <div className="w-1/2 mr-4">
+        <div className="flex items-center">
+          <label
+            htmlFor="genre-select"
+            className="font-bold text-gray-700 mr-4 w-3/4 text-right"
           >
             Filter by Genre:
           </label>
@@ -87,6 +133,14 @@ const Filters = ({ genres, fetchMovies }) => {
             ))}
           </select>
         </div>
+      </div>
+      <div className="w-2/4 ml-6">
+        <button
+          className="px-4 py-2 bg-gray-700 text-white rounded"
+          onClick={handleClearFilters}
+        >
+          Clear Filters
+        </button>
       </div>
     </div>
   );
@@ -140,7 +194,6 @@ const MovieItem = (props) => {
           className="object-cover w-full h-60 md:h-80"
           src={props.image}
           alt={props.title}
-          alt={props.genre}
           loading="lazy"
         />
       </div>
